@@ -17,20 +17,67 @@
 <body>
     <!-- You may change the dimensions of this canvas -->
     <canvas id="myCanvas" width="750px" height="750px"></canvas>
+    <p id="error_message">
+      
+    </p>
 </body>
 <script>
+       $(document).ready(function(){
+         // setting up the canvas and one paper tool
+         var canvas = document.getElementById('myCanvas');
+         paper.setup(canvas);
+         var tool = new paper.Tool();
+         var color = paper.Color.random();
+         var myPath = new paper.Path();
+         myPath.strokeColor = color;
+         var copyPath = new paper.Path();
+         var random_id = Math.random();
+         var message;
+         var buffer;
+         tool.onMouseMove = function(event){
+           message ={
+             "point": {"x": event.point.x,
+                        "y": event.point.y},
+              "color": color,
+              "id": random_id
+            };
+            myPath.add(event.point);
+            buffer = JSON.stringify(message);
+            socket.send(buffer);
+          };  
+          // getting the URL (you may want to use for Exercise 3)
+          var url = window.location.href;
+          var is_large = true;
 
-    // setting up the canvas and one paper tool
-    var canvas = document.getElementById('myCanvas');
-    paper.setup(canvas);
-    var tool = new paper.Tool();
+          if(url.indexOf('large')>(-1)){
+            is_large = true;
+          }else{
+            is_large = false;
+          }
 
-    // getting the URL (you may want to use for Exercise 3)
-    var url = window.location.href;
 
-    // var socket = new WebSocket(
-    //     'wss://<your url here>/ws/draw');
+          var socket = new WebSocket('wss://p3-websockets-clee8420-codingbabyfood780015.codeanyapp.com/ws/draw');
+          var placeholder;
 
+          socket.onmessage = function(receivedMessage) {
+            if(is_large){
+              placeholder = JSON.parse(receivedMessage.data);
+              var emit_color = new paper.Color(placeholder["color"][1], placeholder["color"][2], placeholder["color"][3]);
+              if(emit_color.equals(copyPath.strokeColor)){
+                copyPath.add(placeholder["point"]);
+              }else{
+                copyPath = new paper.Path();
+                copyPath.strokeColor = emit_color;
+                copyPath.add(placeholder["point"]);
+              }
+            }
+
+          };
+          socket.onclose = function(e) {
+              console.error('Chat socket closed unexpectedly');
+          };
+
+      });
 
 </script>
 </html>
